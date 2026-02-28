@@ -1,46 +1,106 @@
-tell me about all the important git command for the parallel process with the multiagent.
-so when I go over how deos the Cladue ro Codex useres use AI.
+# Git Parallel Cookbook for Multi-Agent Work
 
-they use multiple termianl windwo and do muliple process righT?
+## Short Answer to Your Main Questions
 
-but I think they are working in the same dir but
+1. Yes, people run multiple terminals and multiple AI agents in parallel.
+2. For local development, the common safe pattern is:
+   - one branch per task
+   - one worktree (separate directory) per active branch/agent
+3. Two agents should not actively edit the same directory at the same time.
+4. You can switch branches in one directory, but that is a sequential workflow, not true parallel work.
+5. Yes, after parallel work on separate branches, you merge the branches.
 
-use different worktree or branch right?
+## Important Git Commands for Parallel Agent Work
 
+### Branch basics
+```bash
+git branch                   # list local branches
+git switch main              # switch branch
+git switch -c feature/auth   # create + switch to a new branch
+git merge feature/auth       # merge branch into current branch
+git rebase main              # rebase current branch on main
+```
 
-as far as I understood we can work differn branch with
-a same single current working dir in our pc righT?
+### Worktree basics (key for parallel agents)
+```bash
+git worktree list
+git worktree add ../wt-auth -b feature/auth main
+git worktree add ../wt-fix bugfix/login
+git worktree remove ../wt-auth
+git worktree prune
+```
 
+### Helpful safety/inspection commands
+```bash
+git status
+git log --oneline --graph --decorate --all -n 30
+git diff
+git branch -vv
+```
 
-but at the same time we can work with a diferent working dir as mapped different branch right>
+## Your Scenarios (A/B branch, dir1/dir2)
 
+### Scenario 1: `branch A - dir1`, `branch B - dir1` (single directory)
+- This means switching branches back and forth in one folder.
+- Good for one person doing one task at a time.
+- Bad for parallel agents because:
+  - uncommitted changes collide
+  - stashing/context switching overhead
+  - high chance of mistakes
 
-for instnace
-let's say we ahve A/B branch and dir1/dir2
+### Scenario 2: `branch A - dir1`, `branch B - dir2` (separate directories/worktrees)
+- This is the recommended parallel setup.
+- Each agent gets isolated files and branch context.
+- You can run tests/builds simultaneously for different tasks.
+- Easier review and cleaner diffs.
 
+## What Is More Efficient, and When?
 
-we can work by switching brach that
+### Use single directory + branch switching when:
+- only one active task
+- very short edits
+- no need for parallel execution
 
-branch A - dir1 -> agent1
-branch B - dir1 -> agent2
+### Use multiple worktrees when:
+- multiple agents/humans work concurrently
+- features are independent
+- you need long-running tasks in parallel (tests, refactors, bugfixes)
+- you want low context-switch cost and safer isolation
 
+## Practical Pattern for 2 Agents
 
-but at the same time
+```bash
+# from main repo dir (dir1)
+git switch main
+git pull
 
+# create worktree for agent1
+git worktree add ../dir_agent1 -b feature/A main
 
-barnch A - dir1 -> agent1
-branch B - dir2 -> agent2
+# create worktree for agent2
+git worktree add ../dir_agent2 -b feature/B main
+```
 
+Then:
+- Agent1 works only in `../dir_agent1`
+- Agent2 works only in `../dir_agent2`
+- Commit separately
+- Open PRs or merge branches after review
 
-and then, we can merge the project. right??
+## Reality Check: How People Use It
 
-so tell me what is more effeicent in what situation .
+In real workflows, teams increasingly use worktrees for parallel AI/human coding because branch switching in one folder does not scale well with multiple active tasks. This is especially true when two agents run at once.
 
+## Notes for Current Claude/Codex-style Agent Workflows
 
-in terms of currernt Claude agent system.
+- Local multi-agent sessions: worktree-per-agent is the safest default.
+- Cloud agent systems may run each task in isolated sandboxes (different from your local filesystem), but local Git integration still benefits from branch/worktree discipline.
 
+## Sources
 
-(find in the web how ppl use in reality)
-
-
-
+- Git official docs: `git worktree`  
+  https://git-scm.com/docs/git-worktree
+- Git official docs: `git branch`  
+  https://git-scm.com/docs/git-branch
+- OpenAI Codex announcement (parallel task context in isolated environments)  
+  https://openai.com/index/introducing-codex/
